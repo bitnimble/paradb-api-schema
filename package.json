@@ -1,0 +1,8 @@
+{
+  "name": "paradb-api-schema",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:anonymousthing/paradb-api-schema.git",
+  "author": "D <me@kumo.dev>",
+  "license": "MIT"
+}
