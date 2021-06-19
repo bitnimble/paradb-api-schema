@@ -3,6 +3,7 @@
     "lib": [
       "esnext"
     ],
+    "declaration": true,
     "moduleResolution": "node",
     "strict": true,
     "baseUrl": "src",
@@ -16,5 +17,8 @@
   },
   "include": [
     "src",
+  ],
+  "exclude": [
+    "src/tests"
   ]
 }

@@ -1,4 +1,4 @@
-import { serializeSignupRequest } from 'users';
+import { serializeSignupRequest } from '../users';
 
 describe('users', () => {
   it('can serialize a user', () => {

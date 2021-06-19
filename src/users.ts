@@ -1,4 +1,4 @@
-import { rec, Reify, str } from 'serialization';
+import { rec, Reify, str } from './serialization';
 
 export type SignupRequest = Reify<typeof serializeSignupRequest>;
 export const [serializeSignupRequest, deserializeSignupRequest] = rec('signupRequest', {

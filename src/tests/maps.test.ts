@@ -1,4 +1,4 @@
-import { deserializeMap, serializeMap } from 'maps';
+import { deserializeMap, serializeMap } from '../maps';
 
 describe('maps', () => {
   it('can serialize a map', () => {
