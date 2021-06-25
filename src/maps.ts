@@ -11,6 +11,7 @@ const complexity = rec('complexity', {
 export type PDMap = Reify<typeof serializeMap>;
 const pdMap = rec('map', {
   id: str('id'),
+  submissionDate: str('submissionDate'),
   title: str('title'),
   artist: str('artist'),
   author: optional(str('author')),
