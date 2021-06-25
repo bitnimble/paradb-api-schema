@@ -4,7 +4,7 @@ export type Complexity = Reify<typeof complexity>;
 const complexity = rec('complexity', {
   complexity: num('complexity'),
   complexityName: optional(str('complexityName')),
-})
+});
 
 export type PDMap = Reify<typeof serializeMap>;
 export const [serializeMap, deserializeMap] = rec('map', {

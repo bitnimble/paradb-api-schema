@@ -1,6 +1,6 @@
 type Serializer<T> = (t: T, parent?: string) => T | string;
 type Deserializer<T> = (s: unknown, parent?: string) => T;
-type Validator<T> = readonly [Serializer: Serializer<T>, Deserializer: Deserializer<T>];
+export type Validator<T> = readonly [Serializer: Serializer<T>, Deserializer: Deserializer<T>];
 
 type StringValidatorOpts = {
   maxLength?: number,
@@ -11,6 +11,19 @@ class InvalidTypeError extends Error {
     super(`Expected ${name} to be ${expectedType} but found type ${typeof value} instead, with value ${JSON.stringify(value)}`)
   }
 }
+
+export const bool = <T extends boolean>(name: string, value: T): Validator<T> => [
+  (b: T) => b,
+  (raw: unknown) => {
+    if (typeof raw !== 'boolean') {
+      throw new InvalidTypeError(name, 'boolean', raw);
+    }
+    if (raw !== value) {
+      throw new InvalidTypeError(name, value.toString(), raw);
+    }
+    return raw as T;
+  },
+]
 
 export const str = (name: string, o?: StringValidatorOpts): Validator<string> => [
   (s: string) => s,
@@ -79,6 +92,61 @@ export function rec<S extends Record<string, Validator<any>>>(name: string, sche
         (validator as Validator<any>)[1](propValue);
       }
       return o as Reify<S>;
+    },
+  ] as const;
+}
+
+export function extend<B extends Validator<any>, S extends Record<string, Validator<any>>>(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>> {
+  return [
+    (t, parent) => {
+      if (parent != null) {
+        return t;
+      }
+      return JSON.stringify(t);
+    },
+    (o, parent) => {
+      if (typeof o !== 'object' || o == null) {
+        throw new InvalidTypeError(name, 'object', o);
+      }
+      const [_, baseDeserializer] = base;
+      baseDeserializer(o);
+      // Test all property constraints
+      for (const [_key, validator] of Object.entries(schema)) {
+        const key = _key as keyof Reify<S>;
+        const propValue = (o as any)[key];
+        (validator as Validator<any>)[1](propValue);
+      }
+      return o as Reify<B> & Reify<S>;
+    },
+  ] as const;
+}
+
+export function union<
+    D extends string,
+    B extends Validator<any>,
+    S extends B[],
+>(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>> {
+  return [
+    (t, parent) => {
+      if (parent != null) {
+        return t;
+      }
+      return JSON.stringify(t);
+    },
+    (o, parent) => {
+      if (typeof o !== 'object' || o == null) {
+        throw new InvalidTypeError(name, 'union', o);
+      }
+      for (const schema of schemas) {
+        try {
+          const [_, deserializer] = (schema as unknown as Validator<any>);
+          deserializer(o);
+          return o as Reify<S[0]>;
+        } catch (e) {
+          continue;
+        }
+      }
+      throw new InvalidTypeError(name, 'union', o);
     },
   ] as const;
 }
