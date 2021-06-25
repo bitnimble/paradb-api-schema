@@ -151,7 +151,7 @@ export function union<
   ] as const;
 }
 
-export function arr<S extends Validator<any>>(name: string, itemSchema: S): Validator<Reify<S>[]> {
+export function list<S extends Validator<any>>(name: string, itemSchema: S): Validator<Reify<S>[]> {
   return [
     (t, parent) => {
       if (parent != null) {

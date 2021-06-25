@@ -1,6 +1,14 @@
 import { apiError, apiSuccess } from './api';
 import { extend, optional, rec, Reify, str, union } from './serialization';
 
+/* Structs */
+export type User = Reify<typeof serializeUser>;
+export const [serializeUser, deserializeUser] = rec('user', {
+  id: str('id'),
+  username: str('username'),
+  email: str('email'),
+});
+
 /* Login */
 export type LoginRequest = Reify<typeof serializeLoginRequest>;
 export const [serializeLoginRequest, deserializeLoginRequest] = rec('loginRequest', {
@@ -27,11 +35,3 @@ const signupError = extend('signupError', apiError, {
 });
 export type SignupResponse = Reify<typeof serializeSignupResponse>;
 export const [serializeSignupResponse, deserializeSignupResponse] = union('signupResponse', 'success', [apiSuccess, signupError]);
-
-/* Structs */
-export type User = Reify<typeof serializeUser>;
-export const [serializeUser, deserializeUser] = rec('user', {
-  id: str('id'),
-  username: str('username'),
-  email: str('email'),
-});
