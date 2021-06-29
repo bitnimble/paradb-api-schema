@@ -12,50 +12,58 @@ class InvalidTypeError extends Error {
   }
 }
 
+const validateBool = <T extends boolean>(name: string, literalValue: T, b: unknown) => {
+  if (typeof b !== 'boolean') {
+    throw new InvalidTypeError(name, 'boolean', b);
+  }
+  if (b !== literalValue) {
+    throw new InvalidTypeError(name, literalValue.toString(), b);
+  }
+  return b as T;
+};
 export const bool = <T extends boolean>(name: string, value: T): Validator<T> => [
-  (b: T) => b,
-  (raw: unknown) => {
-    if (typeof raw !== 'boolean') {
-      throw new InvalidTypeError(name, 'boolean', raw);
-    }
-    if (raw !== value) {
-      throw new InvalidTypeError(name, value.toString(), raw);
-    }
-    return raw as T;
-  },
+  (b: T) => validateBool(name, value, b),
+  (raw: unknown) => validateBool(name, value, raw),
 ]
 
+const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
+  if (typeof s !== 'string') {
+    throw new InvalidTypeError(name, 'string', s);
+  }
+  if (o?.maxLength != null && s.length > o.maxLength) {
+    throw new Error(`Expected ${name} to be less than ${o.maxLength} characters, but was ${s.length} instead`);
+  }
+  return s;
+};
 export const str = (name: string, o?: StringValidatorOpts): Validator<string> => [
-  (s: string) => s,
-  (raw: unknown) => {
-    if (typeof raw !== 'string') {
-      throw new InvalidTypeError(name, 'string', raw);
-    }
-    if (o?.maxLength != null && raw.length > o.maxLength) {
-      throw new Error(`Expected ${name} to be less than ${o.maxLength} characters, but was ${raw.length} instead`);
-    }
-    return raw;
-  },
+  (s: string) => validateString(name, s, o),
+  (raw: unknown) => validateString(name, raw, o),
 ] as const;
 
+const validateNumber = (name: string, n: unknown) => {
+  if (typeof n !== 'number') {
+    throw new InvalidTypeError(name, 'number', n);
+  }
+  return n;
+}
 export const num = (name: string) => [
-  (n: number) => n,
-  (raw: unknown) => {
-    if (typeof raw !== 'number') {
-      throw new InvalidTypeError(name, 'number', raw);
-    }
-    return raw;
-  },
+  (n: number) => validateNumber(name, n),
+  (n: unknown) => validateNumber(name, n),
 ] as const;
 
 export function optional<S extends Validator<any>>(schema: S): Validator<Reify<S> | undefined> {
   return [
-    (t, parent) => t,
+    (t, parent) => {
+      if (typeof t != null) {
+        schema[0](t, parent);
+      }
+      return t;
+    },
     (o, parent) => {
       if (o == null) {
         return;
       }
-      schema[1](o);
+      schema[1](o, parent);
       return o as Reify<S>;
     },
   ] as const;
@@ -76,20 +84,31 @@ export type Reify<Schema> = Schema extends Record<string, Validator<any>>
 export function rec<S extends Record<string, Validator<any>>>(name: string, schema: S): Validator<Reify<S>> {
   return [
     (t, parent) => {
+      // Test all property constraints
+      for (const [_key, validator] of Object.entries(schema)) {
+        const key = _key as keyof Reify<S>;
+        const propValue = (t as any)[key];
+        (validator as Validator<any>)[1](propValue, name);
+      }
       if (parent != null) {
         return t;
       }
       return JSON.stringify(t);
     },
-    (o, parent) => {
-      if (typeof o !== 'object' || o == null) {
+    (_o, parent) => {
+      let o: unknown;
+      if (typeof _o === 'string') {
+        o = JSON.parse(_o);
+      } else if (typeof _o === 'object') {
+        o = _o
+      } else {
         throw new InvalidTypeError(name, 'object', o);
       }
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any>)[1](propValue);
+        (validator as Validator<any>)[1](propValue, name);
       }
       return o as Reify<S>;
     },
@@ -99,22 +118,35 @@ export function rec<S extends Record<string, Validator<any>>>(name: string, sche
 export function extend<B extends Validator<any>, S extends Record<string, Validator<any>>>(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>> {
   return [
     (t, parent) => {
+      const [baseSerializer] = base;
+      baseSerializer(t, name);
+      // Test all property constraints
+      for (const [_key, validator] of Object.entries(schema)) {
+        const key = _key as keyof Reify<S>;
+        const propValue = (t as any)[key];
+        (validator as Validator<any>)[1](propValue, name);
+      }
       if (parent != null) {
         return t;
       }
       return JSON.stringify(t);
     },
-    (o, parent) => {
-      if (typeof o !== 'object' || o == null) {
+    (_o, parent) => {
+      let o: unknown;
+      if (typeof _o === 'string') {
+        o = JSON.parse(_o);
+      } else if (typeof _o === 'object') {
+        o = _o
+      } else {
         throw new InvalidTypeError(name, 'object', o);
       }
       const [_, baseDeserializer] = base;
-      baseDeserializer(o);
+      baseDeserializer(o, name);
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any>)[1](propValue);
+        (validator as Validator<any>)[1](propValue, name);
       }
       return o as Reify<B> & Reify<S>;
     },
@@ -128,19 +160,33 @@ export function union<
 >(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>> {
   return [
     (t, parent) => {
+      for (const schema of schemas) {
+        try {
+          const [serializer] = (schema as unknown as Validator<any>);
+          serializer(t, parent);
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
       if (parent != null) {
         return t;
       }
       return JSON.stringify(t);
     },
-    (o, parent) => {
-      if (typeof o !== 'object' || o == null) {
+    (_o, parent) => {
+      let o: unknown;
+      if (typeof _o === 'string') {
+        o = JSON.parse(_o);
+      } else if (typeof _o === 'object') {
+        o = _o
+      } else {
         throw new InvalidTypeError(name, 'union', o);
       }
       for (const schema of schemas) {
         try {
           const [_, deserializer] = (schema as unknown as Validator<any>);
-          deserializer(o);
+          deserializer(o, parent);
           return o as Reify<S[0]>;
         } catch (e) {
           continue;
@@ -151,11 +197,15 @@ export function union<
   ] as const;
 }
 
+// TODO: support top level lists (i.e. add JSON.parse and JSON.serialize)
 export function list<S extends Validator<any>>(name: string, itemSchema: S): Validator<Reify<S>[]> {
   return [
     (t, parent) => {
       if (parent != null) {
         return t;
+      }
+      for (const i of t) {
+        itemSchema[0](i, name);
       }
       return JSON.stringify(t);
     },
@@ -164,7 +214,7 @@ export function list<S extends Validator<any>>(name: string, itemSchema: S): Val
         throw new InvalidTypeError(name, 'array', a);
       }
       for (const i of a) {
-        itemSchema[1](i);
+        itemSchema[1](i, name);
       }
       return a as Reify<S>[];
     },

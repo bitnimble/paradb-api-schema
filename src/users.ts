@@ -9,6 +9,14 @@ export const [serializeUser, deserializeUser] = rec('user', {
   email: str('email'),
 });
 
+export type UserSession = Reify<typeof serializeUserSession>;
+export const [serializeUserSession, deserializeUserSession] = rec('userSession', {
+  id: str('id'),
+  username: str('username'),
+  accountStatus: str('accountStatus'),
+  email: str('email'),
+});
+
 /* Login */
 export type LoginRequest = Reify<typeof serializeLoginRequest>;
 export const [serializeLoginRequest, deserializeLoginRequest] = rec('loginRequest', {
