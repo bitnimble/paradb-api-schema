@@ -19,7 +19,6 @@ const pdMap = rec('map', {
   albumArt: optional(str('albumArt')),
   complexities: list('complexities', complexity),
   description: optional(str('description')),
-  downloadLink: str('downloadLink'),
 });
 export const [serializeMap, deserializeMap] = pdMap;
 
@@ -48,13 +47,7 @@ export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union('f
 /* POST submitMap */
 export type SubmitMapRequest = Reify<typeof serializeSubmitMapRequest>;
 export const [serializeSubmitMapRequest, deserializeSubmitMapRequest] = rec('submitMapRequest', {
-  title: str('title'),
-  artist: str('artist'),
-  author: optional(str('author')),
-  albumArt: optional(str('albumArt')),
-  complexities: list('complexities', complexity),
-  description: optional(str('description')),
-  downloadLink: str('downloadLink'),
+  mapData: str('mapData'),
 });
 
 export type SubmitMapSuccess = Reify<typeof submitMapSuccess>;
@@ -62,11 +55,7 @@ const submitMapSuccess = extend('submitMapSuccess', apiSuccess, {
   id: str('id'),
 });
 
-const submitMapError = extend('submitMapError', apiError, {
-  title: optional(str('title')),
-  artist: optional(str('artist')),
-  downloadLink: optional(str('downloadLink')),
-});
+const submitMapError = extend('submitMapError', apiError, {});
 export const [serializeSubmitMapError, deserializeSubmitMapError] = submitMapError;
 export type SubmitMapResponse = Reify<typeof serializeSubmitMapResponse>;
 export const [serializeSubmitMapResponse, deserializeSubmitMapResponse] = union('submitMapResponse', 'success', [submitMapSuccess, submitMapError]);
