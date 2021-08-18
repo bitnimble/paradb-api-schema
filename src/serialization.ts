@@ -1,6 +1,6 @@
-type Serializer<T> = (t: T, parent?: string) => T | string;
+type Serializer<T, S> = (t: T, parent?: string) => S;
 type Deserializer<T> = (s: unknown, parent?: string) => T;
-export type Validator<T> = readonly [Serializer: Serializer<T>, Deserializer: Deserializer<T>];
+export type Validator<T, S> = readonly [Serializer: Serializer<T, S>, Deserializer: Deserializer<T>];
 
 type StringValidatorOpts = {
   maxLength?: number,
@@ -21,7 +21,7 @@ const validateBool = <T extends boolean>(name: string, literalValue: T, b: unkno
   }
   return b as T;
 };
-export const bool = <T extends boolean>(name: string, value: T): Validator<T> => [
+export const bool = <T extends boolean>(name: string, value: T): Validator<T, boolean> => [
   (b: T) => validateBool(name, value, b),
   (raw: unknown) => validateBool(name, value, raw),
 ]
@@ -35,7 +35,7 @@ const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
   }
   return s;
 };
-export const str = (name: string, o?: StringValidatorOpts): Validator<string> => [
+export const str = (name: string, o?: StringValidatorOpts): Validator<string, string> => [
   (s: string) => validateString(name, s, o),
   (raw: unknown) => validateString(name, raw, o),
 ] as const;
@@ -51,7 +51,7 @@ export const num = (name: string) => [
   (n: unknown) => validateNumber(name, n),
 ] as const;
 
-export function optional<S extends Validator<any>>(schema: S): Validator<Reify<S> | undefined> {
+export function optional<S extends Validator<any, any>>(schema: S): Validator<Reify<S> | undefined, (S extends Validator<any, infer S> ? S : never) | undefined> {
   return [
     (t, parent) => {
       if (typeof t != null) {
@@ -69,29 +69,26 @@ export function optional<S extends Validator<any>>(schema: S): Validator<Reify<S
   ] as const;
 }
 
-export type Reify<Schema> = Schema extends Record<string, Validator<any>>
+export type Reify<Schema> = Schema extends Record<string, Validator<any, any>>
   ? { [K in keyof Schema]: ReturnType<Schema[K][1]> }
-  : Schema extends Validator<infer T>
+  : Schema extends Validator<infer T, any>
     ? T extends Array<infer I>
       ? I
       : T
-    : Schema extends Serializer<infer T>
+    : Schema extends Serializer<infer T, any>
       ? T
       : Schema extends Deserializer<infer T>
         ? T
         : never;
 
-export function rec<S extends Record<string, Validator<any>>>(name: string, schema: S): Validator<Reify<S>> {
+export function rec<S extends Record<string, Validator<any, any>>>(name: string, schema: S): Validator<Reify<S>, string> {
   return [
     (t, parent) => {
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any>)[1](propValue, name);
-      }
-      if (parent != null) {
-        return t;
+        (validator as Validator<any, any>)[1](propValue, name);
       }
       return JSON.stringify(t);
     },
@@ -108,14 +105,14 @@ export function rec<S extends Record<string, Validator<any>>>(name: string, sche
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](propValue, name);
       }
       return o as Reify<S>;
     },
   ] as const;
 }
 
-export function extend<B extends Validator<any>, S extends Record<string, Validator<any>>>(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>> {
+export function extend<B extends Validator<any, string>, S extends Record<string, Validator<any, any>>>(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>, string> {
   return [
     (t, parent) => {
       const [baseSerializer] = base;
@@ -124,7 +121,7 @@ export function extend<B extends Validator<any>, S extends Record<string, Valida
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](propValue, name);
       }
       if (parent != null) {
         return t;
@@ -146,7 +143,7 @@ export function extend<B extends Validator<any>, S extends Record<string, Valida
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](propValue, name);
       }
       return o as Reify<B> & Reify<S>;
     },
@@ -155,14 +152,14 @@ export function extend<B extends Validator<any>, S extends Record<string, Valida
 
 export function union<
     D extends string,
-    B extends Validator<any>,
+    B extends Validator<any, string>,
     S extends B[],
->(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>> {
+>(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>, string> {
   return [
     (t, parent) => {
       for (const schema of schemas) {
         try {
-          const [serializer] = (schema as unknown as Validator<any>);
+          const [serializer] = (schema as unknown as Validator<any, any>);
           serializer(t, parent);
           break;
         } catch (e) {
@@ -185,7 +182,7 @@ export function union<
       }
       for (const schema of schemas) {
         try {
-          const [_, deserializer] = (schema as unknown as Validator<any>);
+          const [_, deserializer] = (schema as unknown as Validator<any, any>);
           deserializer(o, parent);
           return o as Reify<S[0]>;
         } catch (e) {
@@ -198,7 +195,7 @@ export function union<
 }
 
 // TODO: support top level lists (i.e. add JSON.parse and JSON.serialize)
-export function list<S extends Validator<any>>(name: string, itemSchema: S): Validator<Reify<S>[]> {
+export function list<S extends Validator<any, any>>(name: string, itemSchema: S): Validator<Reify<S>[], any> {
   return [
     (t, parent) => {
       if (parent != null) {
