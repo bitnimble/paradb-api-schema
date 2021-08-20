@@ -31,7 +31,11 @@ export type GetMapResponse = Reify<typeof serializeGetMapResponse>;
 const getMapSuccess = extend('getMapSuccess', apiSuccess, {
   map: pdMap,
 });
-export const [serializeGetMapResponse, deserializeGetMapResponse] = union('getMapResponse', 'success', [getMapSuccess, apiError]);
+export const [serializeGetMapResponse, deserializeGetMapResponse] = union(
+    'getMapResponse',
+    'success',
+    [getMapSuccess, apiError],
+);
 
 /* GET findMaps */
 export type FindMapsRequest = Reify<typeof serializeFindMapsRequest>;
@@ -42,7 +46,11 @@ export type FindMapsResponse = Reify<typeof serializeFindMapsResponse>;
 const findMapsSuccess = extend('findMapsSuccess', apiSuccess, {
   maps: list('maps', pdMap),
 });
-export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union('findMapsResponse', 'success', [findMapsSuccess, apiError]);
+export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union(
+    'findMapsResponse',
+    'success',
+    [findMapsSuccess, apiError],
+);
 
 /* POST submitMap */
 export type SubmitMapRequest = Reify<typeof serializeSubmitMapRequest>;
@@ -58,4 +66,8 @@ const submitMapSuccess = extend('submitMapSuccess', apiSuccess, {
 const submitMapError = extend('submitMapError', apiError, {});
 export const [serializeSubmitMapError, deserializeSubmitMapError] = submitMapError;
 export type SubmitMapResponse = Reify<typeof serializeSubmitMapResponse>;
-export const [serializeSubmitMapResponse, deserializeSubmitMapResponse] = union('submitMapResponse', 'success', [submitMapSuccess, submitMapError]);
+export const [serializeSubmitMapResponse, deserializeSubmitMapResponse] = union(
+    'submitMapResponse',
+    'success',
+    [submitMapSuccess, submitMapError],
+);

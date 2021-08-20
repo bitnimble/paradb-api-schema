@@ -26,7 +26,11 @@ export const [serializeLoginRequest, deserializeLoginRequest] = rec('loginReques
 export type LoginError = Reify<typeof loginError>;
 const loginError = extend('loginError', apiError, {});
 export type LoginResponse = Reify<typeof serializeLoginResponse>;
-export const [serializeLoginResponse, deserializeLoginResponse] = union('loginResponse', 'success', [apiSuccess, loginError]);
+export const [serializeLoginResponse, deserializeLoginResponse] = union(
+    'loginResponse',
+    'success',
+    [apiSuccess, loginError],
+);
 
 /* Signup */
 export type SignupRequest = Reify<typeof serializeSignupRequest>;
@@ -42,4 +46,8 @@ const signupError = extend('signupError', apiError, {
   password: optional(str('password')),
 });
 export type SignupResponse = Reify<typeof serializeSignupResponse>;
-export const [serializeSignupResponse, deserializeSignupResponse] = union('signupResponse', 'success', [apiSuccess, signupError]);
+export const [serializeSignupResponse, deserializeSignupResponse] = union(
+    'signupResponse',
+    'success',
+    [apiSuccess, signupError],
+);
