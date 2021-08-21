@@ -1,6 +1,8 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  moduleNameMapper: {
+    '^msgpackr$': 'msgpackr/dist',
+  },
   modulePaths: ['<rootDir>/src'],
   reporters: ['jest-standard-reporter']
 };

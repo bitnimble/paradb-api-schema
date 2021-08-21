@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from './api';
-import { extend, list, num, optional, rec, Reify, str, union } from './serialization';
+import { extend, list, num, optional, rec, Reify, str, u8array, union } from './serialization';
 
 /* Structs */
 export type Complexity = Reify<typeof complexity>;
@@ -55,7 +55,7 @@ export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union(
 /* POST submitMap */
 export type SubmitMapRequest = Reify<typeof serializeSubmitMapRequest>;
 export const [serializeSubmitMapRequest, deserializeSubmitMapRequest] = rec('submitMapRequest', {
-  mapData: str('mapData'),
+  mapData: u8array('mapData'),
 });
 
 export type SubmitMapSuccess = Reify<typeof submitMapSuccess>;
