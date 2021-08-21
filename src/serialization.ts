@@ -2,14 +2,18 @@ import * as msgpackr from 'msgpackr';
 
 type Serializer<T, S> = (t: T, parent?: string) => S;
 type Deserializer<T> = (s: unknown, parent?: string) => T;
-export type Validator<T, S> = readonly [
+export type Type<T, S> = readonly [
   Serializer: Serializer<T, S>,
   Deserializer: Deserializer<T>,
 ];
 
-type StringValidatorOpts = {
-  maxLength?: number,
-};
+export type Reify<Schema> = Schema extends Record<string, Type<any, any>>
+    ? { [K in keyof Schema]: ReturnType<Schema[K][1]> }
+    : Schema extends Type<infer T, any> ? T extends Array<infer I> ? I
+    : T
+    : Schema extends Serializer<infer T, any> ? T
+    : Schema extends Deserializer<infer T> ? T
+    : never;
 
 class InvalidTypeError extends Error {
   constructor(name: string, expectedType: string, value: any) {
@@ -28,11 +32,14 @@ const validateBool = <T extends boolean>(name: string, literalValue: T, b: unkno
   }
   return b as T;
 };
-export const bool = <T extends boolean>(name: string, value: T): Validator<T, boolean> => [
+export const bool = <T extends boolean>(name: string, value: T): Type<T, boolean> => [
   (b: T) => validateBool(name, value, b),
   (raw: unknown) => validateBool(name, value, raw),
 ];
 
+type StringValidatorOpts = {
+  maxLength?: number,
+};
 const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
   if (typeof s !== 'string') {
     throw new InvalidTypeError(name, 'string', s);
@@ -42,7 +49,7 @@ const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
   }
   return s;
 };
-export const str = (name: string, o?: StringValidatorOpts): Validator<string, string> =>
+export const str = (name: string, o?: StringValidatorOpts): Type<string, string> =>
     [
       (s: string) => validateString(name, s, o),
       (_, raw: unknown) => validateString(name, raw, o),
@@ -54,7 +61,7 @@ const validateNumber = (name: string, n: unknown) => {
   }
   return n;
 };
-export const num = (name: string): Validator<number, number> =>
+export const num = (name: string): Type<number, number> =>
     [
       (n: number) => validateNumber(name, n),
       (n: unknown) => validateNumber(name, n),
@@ -66,17 +73,17 @@ const validateu8Array = (name: string, a: unknown) => {
   }
   return a;
 };
-export const u8array = (name: string): Validator<Uint8Array, Uint8Array> =>
+export const u8array = (name: string): Type<Uint8Array, Uint8Array> =>
     [
       (a: Uint8Array) => validateu8Array(name, a),
       (a: unknown) => validateu8Array(name, a),
     ] as const;
 
 export function optional<
-    S extends Validator<any, any>,
->(schema: S): Validator<
+    S extends Type<any, any>,
+>(schema: S): Type<
     Reify<S> | undefined,
-    (S extends Validator<any, infer S> ? S : never) | undefined
+    (S extends Type<any, infer S> ? S : never) | undefined
 > {
   return [
     (t, parent) => {
@@ -94,26 +101,19 @@ export function optional<
   ] as const;
 }
 
-export type Reify<Schema> = Schema extends Record<string, Validator<any, any>>
-    ? { [K in keyof Schema]: ReturnType<Schema[K][1]> }
-    : Schema extends Validator<infer T, any> ? T extends Array<infer I> ? I
-    : T
-    : Schema extends Serializer<infer T, any> ? T
-    : Schema extends Deserializer<infer T> ? T
-    : never;
-
-export function rec<S extends Record<string, Validator<any, any>>>(
+export function rec<S extends Record<string, Type<any, any>>>(
     name: string,
     schema: S,
-): Validator<Reify<S>, Uint8Array> {
+): Type<Reify<S>, Uint8Array> {
   return [
     (t, parent) => {
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Type<any, any>)[0](propValue, name);
       }
+      // TODO: separate validation and serialization, to avoid unnecessary packing at every level
       return msgpackr.pack(t);
     },
     (_o, parent) => {
@@ -129,7 +129,7 @@ export function rec<S extends Record<string, Validator<any, any>>>(
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Type<any, any>)[1](propValue, name);
       }
       return o as Reify<S>;
     },
@@ -137,9 +137,9 @@ export function rec<S extends Record<string, Validator<any, any>>>(
 }
 
 export function extend<
-    B extends Validator<any, Uint8Array>,
-    S extends Record<string, Validator<any, any>>,
->(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>, Uint8Array> {
+    B extends Type<any, Uint8Array>,
+    S extends Record<string, Type<any, any>>,
+>(name: string, base: B, schema: S): Type<Reify<B> & Reify<S>, Uint8Array> {
   return [
     (t, parent) => {
       const [baseSerializer] = base;
@@ -148,7 +148,7 @@ export function extend<
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Type<any, any>)[0](propValue, name);
       }
       if (parent != null) {
         return t;
@@ -170,7 +170,7 @@ export function extend<
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Type<any, any>)[1](propValue, name);
       }
       return o as Reify<B> & Reify<S>;
     },
@@ -179,14 +179,14 @@ export function extend<
 
 export function union<
     D extends string,
-    B extends Validator<any, Uint8Array>,
+    B extends Type<any, Uint8Array>,
     S extends B[],
->(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>, Uint8Array> {
+>(name: string, discriminator: D, schemas: S): Type<Reify<S[0]>, Uint8Array> {
   return [
     (t, parent) => {
       for (const schema of schemas) {
         try {
-          const [serializer] = (schema as unknown as Validator<any, any>);
+          const [serializer] = (schema as unknown as Type<any, any>);
           serializer(t, name);
           break;
         } catch (e) {
@@ -209,7 +209,7 @@ export function union<
       }
       for (const schema of schemas) {
         try {
-          const [_, deserializer] = (schema as unknown as Validator<any, any>);
+          const [_, deserializer] = (schema as unknown as Type<any, any>);
           deserializer(o, name);
           return o as Reify<S[0]>;
         } catch (e) {
@@ -222,10 +222,10 @@ export function union<
 }
 
 // TODO: support top level lists (i.e. add JSON.parse and JSON.serialize)
-export function list<S extends Validator<any, any>>(
+export function list<S extends Type<any, any>>(
     name: string,
     itemSchema: S,
-): Validator<Reify<S>[], any> {
+): Type<Reify<S>[], any> {
   return [
     (t, parent) => {
       if (parent != null) {
