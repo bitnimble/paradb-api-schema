@@ -12,7 +12,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "types": [
-      "jest"
+      "jest",
+      "node"
     ]
   },
   "include": [

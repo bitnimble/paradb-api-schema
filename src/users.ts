@@ -3,11 +3,22 @@ import { extend, optional, rec, Reify, str, union } from './serialization';
 
 /* Structs */
 export type User = Reify<typeof serializeUser>;
-export const [serializeUser, deserializeUser] = rec('user', {
+const user = rec('user', {
   id: str('id'),
   username: str('username'),
   email: str('email'),
 });
+export const [serializeUser, deserializeUser] = user;
+
+export type GetUserSuccess = Reify<typeof getUserSuccess>;
+export const getUserSuccess = extend('getUserSuccess', apiSuccess, {
+  user,
+});
+export const [serializeGetUserResponse, deserializeGetUserResponse] = union(
+    'getUserResponse',
+    'success',
+    [getUserSuccess, apiError],
+);
 
 export type UserSession = Reify<typeof serializeUserSession>;
 export const [serializeUserSession, deserializeUserSession] = rec('userSession', {

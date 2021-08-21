@@ -1,5 +1,12 @@
-type Serializer<T, S> = (t: T, parent?: string) => S;
-type Deserializer<T> = (s: unknown, parent?: string) => T;
+type Bson = {
+  serialize(x: any): Buffer,
+  deserialize(buf: Buffer): any,
+};
+type SerializationDependencies = {
+  bson: Bson,
+};
+type Serializer<T, S> = (deps: SerializationDependencies, t: T, parent?: string) => S;
+type Deserializer<T> = (deps: SerializationDependencies, s: unknown, parent?: string) => T;
 export type Validator<T, S> = readonly [
   Serializer: Serializer<T, S>,
   Deserializer: Deserializer<T>,
@@ -27,8 +34,8 @@ const validateBool = <T extends boolean>(name: string, literalValue: T, b: unkno
   return b as T;
 };
 export const bool = <T extends boolean>(name: string, value: T): Validator<T, boolean> => [
-  (b: T) => validateBool(name, value, b),
-  (raw: unknown) => validateBool(name, value, raw),
+  (_, b: T) => validateBool(name, value, b),
+  (_, raw: unknown) => validateBool(name, value, raw),
 ];
 
 const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
@@ -42,8 +49,8 @@ const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
 };
 export const str = (name: string, o?: StringValidatorOpts): Validator<string, string> =>
     [
-      (s: string) => validateString(name, s, o),
-      (raw: unknown) => validateString(name, raw, o),
+      (_, s: string) => validateString(name, s, o),
+      (_, raw: unknown) => validateString(name, raw, o),
     ] as const;
 
 const validateNumber = (name: string, n: unknown) => {
@@ -52,10 +59,10 @@ const validateNumber = (name: string, n: unknown) => {
   }
   return n;
 };
-export const num = (name: string) =>
+export const num = (name: string): Validator<number, number> =>
     [
-      (n: number) => validateNumber(name, n),
-      (n: unknown) => validateNumber(name, n),
+      (_, n: number) => validateNumber(name, n),
+      (_, n: unknown) => validateNumber(name, n),
     ] as const;
 
 export function optional<
@@ -65,18 +72,17 @@ export function optional<
     (S extends Validator<any, infer S> ? S : never) | undefined
 > {
   return [
-    (t, parent) => {
+    (bson, t, parent) => {
       if (typeof t != null) {
-        schema[0](t, parent);
+        return schema[0](bson, t, parent);
       }
       return t;
     },
-    (o, parent) => {
+    (bson, o, parent) => {
       if (o == null) {
         return;
       }
-      schema[1](o, parent);
-      return o as Reify<S>;
+      return schema[1](bson, o, parent);
     },
   ] as const;
 }
@@ -92,21 +98,21 @@ export type Reify<Schema> = Schema extends Record<string, Validator<any, any>>
 export function rec<S extends Record<string, Validator<any, any>>>(
     name: string,
     schema: S,
-): Validator<Reify<S>, string> {
+): Validator<Reify<S>, Buffer> {
   return [
-    (t, parent) => {
+    (deps, t, parent) => {
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](deps, propValue, name);
       }
-      return JSON.stringify(t);
+      return deps.bson.serialize(t);
     },
-    (_o, parent) => {
+    (deps, _o, parent) => {
       let o: unknown;
-      if (typeof _o === 'string') {
-        o = JSON.parse(_o);
+      if (parent == null) {
+        o = deps.bson.deserialize(_o as Buffer);
       } else if (typeof _o === 'object') {
         o = _o;
       } else {
@@ -116,7 +122,7 @@ export function rec<S extends Record<string, Validator<any, any>>>(
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](deps, propValue, name);
       }
       return o as Reify<S>;
     },
@@ -124,40 +130,40 @@ export function rec<S extends Record<string, Validator<any, any>>>(
 }
 
 export function extend<
-    B extends Validator<any, string>,
+    B extends Validator<any, Buffer>,
     S extends Record<string, Validator<any, any>>,
->(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>, string> {
+>(name: string, base: B, schema: S): Validator<Reify<B> & Reify<S>, Buffer> {
   return [
-    (t, parent) => {
+    (deps, t, parent) => {
       const [baseSerializer] = base;
-      baseSerializer(t, name);
+      baseSerializer(deps, t, name);
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (t as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](deps, propValue, name);
       }
       if (parent != null) {
         return t;
       }
-      return JSON.stringify(t);
+      return deps.bson.serialize(t);
     },
-    (_o, parent) => {
+    (deps, _o, parent) => {
       let o: unknown;
-      if (typeof _o === 'string') {
-        o = JSON.parse(_o);
+      if (parent == null) {
+        o = deps.bson.deserialize(_o as Buffer);
       } else if (typeof _o === 'object') {
         o = _o;
       } else {
         throw new InvalidTypeError(name, 'object', o);
       }
       const [_, baseDeserializer] = base;
-      baseDeserializer(o, name);
+      baseDeserializer(deps, o, name);
       // Test all property constraints
       for (const [_key, validator] of Object.entries(schema)) {
         const key = _key as keyof Reify<S>;
         const propValue = (o as any)[key];
-        (validator as Validator<any, any>)[1](propValue, name);
+        (validator as Validator<any, any>)[1](deps, propValue, name);
       }
       return o as Reify<B> & Reify<S>;
     },
@@ -166,15 +172,15 @@ export function extend<
 
 export function union<
     D extends string,
-    B extends Validator<any, string>,
+    B extends Validator<any, Buffer>,
     S extends B[],
->(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>, string> {
+>(name: string, discriminator: D, schemas: S): Validator<Reify<S[0]>, Buffer> {
   return [
-    (t, parent) => {
+    (deps, t, parent) => {
       for (const schema of schemas) {
         try {
           const [serializer] = (schema as unknown as Validator<any, any>);
-          serializer(t, parent);
+          serializer(deps, t, name);
           break;
         } catch (e) {
           continue;
@@ -183,12 +189,12 @@ export function union<
       if (parent != null) {
         return t;
       }
-      return JSON.stringify(t);
+      return deps.bson.serialize(t);
     },
-    (_o, parent) => {
+    (deps, _o, parent) => {
       let o: unknown;
-      if (typeof _o === 'string') {
-        o = JSON.parse(_o);
+      if (parent == null) {
+        o = deps.bson.deserialize(_o as Buffer);
       } else if (typeof _o === 'object') {
         o = _o;
       } else {
@@ -197,7 +203,7 @@ export function union<
       for (const schema of schemas) {
         try {
           const [_, deserializer] = (schema as unknown as Validator<any, any>);
-          deserializer(o, parent);
+          deserializer(deps, o, name);
           return o as Reify<S[0]>;
         } catch (e) {
           continue;
@@ -214,21 +220,26 @@ export function list<S extends Validator<any, any>>(
     itemSchema: S,
 ): Validator<Reify<S>[], any> {
   return [
-    (t, parent) => {
+    (deps, t, parent) => {
       if (parent != null) {
         return t;
       }
       for (const i of t) {
-        itemSchema[0](i, name);
+        itemSchema[0](deps, i, name);
       }
-      return JSON.stringify(t);
+      return deps.bson.serialize(t);
     },
-    (a, parent) => {
-      if (!Array.isArray(a)) {
+    (deps, _a, parent) => {
+      let a;
+      if (parent == null) {
+        a = deps.bson.deserialize(_a as Buffer);
+      } else if (Array.isArray(_a)) {
+        a = _a;
+      } else {
         throw new InvalidTypeError(name, 'array', a);
       }
       for (const i of a) {
-        itemSchema[1](i, name);
+        itemSchema[1](deps, i, name);
       }
       return a as Reify<S>[];
     },

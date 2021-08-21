@@ -1,11 +1,19 @@
-import { serializeSignupRequest } from '../users';
+import * as bson from 'bson';
+import { deserializeUser, serializeUser, User } from '../users';
 
 describe('users', () => {
   it('can serialize a user', () => {
-    expect(serializeSignupRequest({
+    const deps = {
+      bson,
+      buffer: Buffer,
+    };
+    const user: User = {
+      id: 'UAAAAAA1',
       username: 'alice',
       email: 'alice@example.com',
-      password: '12345678',
-    })).toEqual('{"username":"alice","email":"alice@example.com","password":"12345678"}');
+    };
+    const serialized = serializeUser(deps, user);
+    const deserialized = deserializeUser(deps, serialized);
+    expect(deserialized).toEqual(user);
   });
 });
