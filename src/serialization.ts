@@ -87,7 +87,7 @@ export function optional<
 > {
   return [
     (t, parent) => {
-      if (typeof t != null) {
+      if (t != null) {
         return schema[0](t, parent);
       }
       return t;
