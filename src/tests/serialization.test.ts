@@ -46,6 +46,28 @@ describe('serialization', () => {
       expect(rt(someNum, -Infinity)).toEqual(-Infinity);
       expect(rt(someNum, 3.3333333333333333334)).toEqual(3.3333333333333333334);
     });
+
+    it('fails to serialize a number of the wrong literal type', () => {
+      const literal1234 = num('literal1234', 1, 2, 3, 4);
+      expect(rt(literal1234, 1)).toEqual(1);
+      expect(rt(literal1234, 3)).toEqual(3);
+      // @ts-expect-error
+      expect(() => literal1234.serialize(5)).toThrow('Expected literal1234 to be one of values [1, 2, 3, 4] but found 5 instead')
+    });
+
+    it('can be used with an enum', () => {
+      const enum Dir {
+        N = 1,
+        E = 2,
+        S = 3,
+        W = 4,
+      };
+      const directions = num('directions', Dir.N, Dir.E, Dir.S, Dir.W);
+      expect(rt(directions, Dir.N)).toEqual(Dir.N);
+      expect(rt(directions, Dir.E)).toEqual(Dir.E);
+      expect(rt(directions, Dir.S)).toEqual(Dir.S);
+      expect(rt(directions, Dir.W)).toEqual(Dir.W);
+    });
   });
 
   describe('u8array', () => {

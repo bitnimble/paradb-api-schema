@@ -78,13 +78,22 @@ class StringType<T extends string> extends TypeImpl<T> {
   };
 }
 
-export const num = (name: string): Type<number> => new NumberType(name);
-class NumberType extends TypeImpl<number> {
+export const num = <T extends number>(name: string, ...literalValues: T[]): Type<T> => new NumberType(name, literalValues);
+class NumberType<T extends number> extends TypeImpl<T> {
+  constructor(name: string, private readonly literalValues: T[]) {
+    super(name);
+  }
+
   readonly validate = (n: unknown) => {
     if (typeof n !== 'number') {
       throw new InvalidTypeError(this.name, 'number', n);
     }
-    return n;
+    if (this.literalValues.length > 0) {
+      if (!this.literalValues.includes(n as any)) {
+        throw new Error(`Expected ${this.name} to be one of values [${this.literalValues.join(", ")}] but found ${n} instead`);
+      }
+    }
+    return n as T;
   };
 }
 
