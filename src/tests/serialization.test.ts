@@ -224,6 +224,42 @@ describe('serialization', () => {
       expect(rt(someUnion, val1)).toEqual(val1);
       expect(rt(someUnion, val2)).toEqual(val2);
     });
+
+    it('throws an error if the subschema does not include the discriminator property', () => {
+      expect(() => {
+        union('someUnion', 'success', [
+          rec('someRec1', {
+            success: bool('success', true),
+          }),
+          // @ts-expect-error
+          rec('someRec2', {
+            prop1: bool('prop1'),
+          }),
+        ]);
+      }).toThrow('Subschema "someRec2" of union type "someUnion" is missing discriminator property "success"');
+    });
+
+    it('can discriminate on string literal properties', () => {
+      const someUnion = union('someUnion', 'kind', [
+        rec('someRec1', {
+          kind: str('kind', 'hello'),
+          foo: bool('foo'),
+        }),
+        rec('someRec2', {
+          kind: str('kind', 'goodbye'),
+          bar: bool('bar'),
+        }),
+        rec('someRec2', {
+          kind: str('kind', 'greetings'),
+          baz: bool('baz'),
+        }),
+      ]);
+      const val: Reify<typeof someUnion> = {
+        kind: 'greetings',
+        baz: true,
+      };
+      expect(rt(someUnion, val)).toEqual(val);
+    });
   });
 
   describe('list', () => {
