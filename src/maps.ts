@@ -23,10 +23,6 @@ const pdMap = rec('map', {
 export const [serializeMap, deserializeMap] = pdMap;
 
 /* GET getMap */
-export type GetMapRequest = Reify<typeof serializeGetMapRequest>;
-export const [serializeGetMapRequest, deserializeGetMapRequest] = rec('getMapRequest', {
-  id: str('id'),
-});
 export type GetMapResponse = Reify<typeof serializeGetMapResponse>;
 const getMapSuccess = extend('getMapSuccess', apiSuccess, {
   map: pdMap,
@@ -37,11 +33,16 @@ export const [serializeGetMapResponse, deserializeGetMapResponse] = union(
     [getMapSuccess, apiError],
 );
 
+/* GET deleteMap */
+export type DeleteMapResponse = Reify<typeof serializeDeleteMapResponse>;
+const deleteMapSuccess = extend('deleteMapSuccess', apiSuccess, {});
+export const [serializeDeleteMapResponse, deserializeDeleteMapResponse] = union(
+    'deleteMapResponse',
+    'success',
+    [deleteMapSuccess, apiError],
+);
+
 /* GET findMaps */
-export type FindMapsRequest = Reify<typeof serializeFindMapsRequest>;
-export const [serializeFindMapsRequest, deserializeFindMapsRequest] = rec('findMapsRequest', {
-  // TODO: filters, search
-});
 export type FindMapsResponse = Reify<typeof serializeFindMapsResponse>;
 const findMapsSuccess = extend('findMapsSuccess', apiSuccess, {
   maps: list('maps', pdMap),

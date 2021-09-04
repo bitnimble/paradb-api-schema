@@ -10,7 +10,7 @@ const user = rec('user', {
 });
 export const [serializeUser, deserializeUser] = user;
 
-export type GetUserSuccess = Reify<typeof getUserSuccess>;
+export type GetUserResponse = Reify<typeof serializeGetUserResponse>;
 export const getUserSuccess = extend('getUserSuccess', apiSuccess, {
   user,
 });
