@@ -4,7 +4,10 @@ export type ApiSuccess = Reify<typeof apiSuccess>;
 export const apiSuccess = rec('apiSuccess', {
   success: bool('success', true),
 });
-export const [serializeApiSuccess, deserializeApiSuccess] = apiSuccess;
+export const {
+  serialize: serializeApiSuccess,
+  deserialize: deserializeApiSuccess,
+} = apiSuccess;
 
 export type ApiError = Reify<typeof serializeApiError>;
 export const apiError = rec('apiError', {
@@ -12,6 +15,9 @@ export const apiError = rec('apiError', {
   statusCode: num('statusCode'),
   errorMessage: str('errorMessage'),
 });
-export const [serializeApiError, deserializeApiError] = apiError;
+export const {
+  serialize: serializeApiError,
+  deserialize: deserializeApiError,
+} = apiError;
 
 export const apiResponse = union('apiResponse', 'success', [apiSuccess, apiError]);

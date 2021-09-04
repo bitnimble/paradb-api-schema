@@ -1,18 +1,18 @@
 import * as msgpackr from 'msgpackr';
 
-type Serializer<T, S> = (t: T, parent?: string) => S;
-type Deserializer<T> = (s: unknown, parent?: string) => T;
-export type Type<T, S> = readonly [
-  Serializer: Serializer<T, S>,
-  Deserializer: Deserializer<T>,
-];
+export interface Type<T> {
+  serialize(t: T): Uint8Array;
+  deserialize(u: Uint8Array): T;
+  validate(u: unknown): T;
+}
 
-export type Reify<Schema> = Schema extends Record<string, Type<any, any>>
-    ? { [K in keyof Schema]: ReturnType<Schema[K][1]> }
-    : Schema extends Type<infer T, any> ? T extends Array<infer I> ? I
-    : T
-    : Schema extends Serializer<infer T, any> ? T
-    : Schema extends Deserializer<infer T> ? T
+export type Reify<Schema> =
+    Schema extends Record<string, Type<any>> ? { [K in keyof Schema]: ReturnType<Schema[K]['validate']> }
+    : Schema extends Type<infer T>
+      ? T extends (infer I)[] ? I[]
+      : T
+    : Schema extends (t: infer T) => Uint8Array ? T
+    : Schema extends (u: Uint8Array) => infer T ? T
     : never;
 
 class InvalidTypeError extends Error {
@@ -23,232 +23,177 @@ class InvalidTypeError extends Error {
   }
 }
 
-const validateBool = <T extends boolean>(name: string, literalValue: T, b: unknown) => {
-  if (typeof b !== 'boolean') {
-    throw new InvalidTypeError(name, 'boolean', b);
-  }
-  if (b !== literalValue) {
-    throw new InvalidTypeError(name, literalValue.toString(), b);
-  }
-  return b as T;
-};
-export const bool = <T extends boolean>(name: string, value: T): Type<T, boolean> => [
-  (b: T) => validateBool(name, value, b),
-  (raw: unknown) => validateBool(name, value, raw),
-];
+abstract class TypeImpl<T> implements Type<T> {
+  constructor(
+    protected readonly name: string,
+  ) { }
 
-type StringValidatorOpts = {
-  maxLength?: number,
-};
-const validateString = (name: string, s: unknown, o?: StringValidatorOpts) => {
-  if (typeof s !== 'string') {
-    throw new InvalidTypeError(name, 'string', s);
+  readonly serialize = (t: T) => {
+    const validated = this.validate(t);
+    return msgpackr.pack(validated);
   }
-  if (o?.maxLength != null && s.length > o.maxLength) {
-    throw new Error(`Expected ${name} to be less than ${o.maxLength} characters, but was ${s.length} instead`);
-  }
-  return s;
-};
-export const str = (name: string, o?: StringValidatorOpts): Type<string, string> =>
-    [
-      (s: string) => validateString(name, s, o),
-      (_, raw: unknown) => validateString(name, raw, o),
-    ] as const;
 
-const validateNumber = (name: string, n: unknown) => {
-  if (typeof n !== 'number') {
-    throw new InvalidTypeError(name, 'number', n);
+  readonly deserialize = (u: Uint8Array) => {
+    const unpacked = msgpackr.unpack(u);
+    const validated = this.validate(unpacked);
+    return validated;
   }
-  return n;
-};
-export const num = (name: string): Type<number, number> =>
-    [
-      (n: number) => validateNumber(name, n),
-      (n: unknown) => validateNumber(name, n),
-    ] as const;
 
-const validateu8Array = (name: string, a: unknown) => {
-  if (!(a instanceof Uint8Array)) {
-    throw new InvalidTypeError(name, 'u8array', a);
-  }
-  return a;
-};
-export const u8array = (name: string): Type<Uint8Array, Uint8Array> =>
-    [
-      (a: Uint8Array) => validateu8Array(name, a),
-      (a: unknown) => validateu8Array(name, a),
-    ] as const;
-
-export function optional<
-    S extends Type<any, any>,
->(schema: S): Type<
-    Reify<S> | undefined,
-    (S extends Type<any, infer S> ? S : never) | undefined
-> {
-  return [
-    (t, parent) => {
-      if (t != null) {
-        return schema[0](t, parent);
-      }
-      return t;
-    },
-    (o, parent) => {
-      if (o == null) {
-        return;
-      }
-      return schema[1](o, parent);
-    },
-  ] as const;
+  abstract validate(u: unknown): T;
 }
 
-export function rec<S extends Record<string, Type<any, any>>>(
-    name: string,
-    schema: S,
-): Type<Reify<S>, Uint8Array> {
-  return [
-    (t, parent) => {
-      // Test all property constraints
-      for (const [_key, validator] of Object.entries(schema)) {
-        const key = _key as keyof Reify<S>;
-        const propValue = (t as any)[key];
-        (validator as Type<any, any>)[0](propValue, name);
-      }
-      // TODO: separate validation and serialization, to avoid unnecessary packing at every level
-      return msgpackr.pack(t);
-    },
-    (_o, parent) => {
-      let o: unknown;
-      if (parent == null) {
-        o = msgpackr.unpack(_o as Uint8Array);
-      } else if (typeof _o === 'object') {
-        o = _o;
-      } else {
-        throw new InvalidTypeError(name, 'object', o);
-      }
-      // Test all property constraints
-      for (const [_key, validator] of Object.entries(schema)) {
-        const key = _key as keyof Reify<S>;
-        const propValue = (o as any)[key];
-        (validator as Type<any, any>)[1](propValue, name);
-      }
-      return o as Reify<S>;
-    },
-  ] as const;
+export const bool = <T extends boolean>(name: string, literalValue?: T): Type<T> => new BoolType<T>(name, literalValue);
+class BoolType<T extends boolean> extends TypeImpl<T> {
+  constructor(name: string, private readonly literalValue?: T) {
+    super(name);
+  }
+
+  readonly validate = (b: unknown) => {
+    if (typeof b !== 'boolean') {
+      throw new InvalidTypeError(this.name, 'boolean', b);
+    }
+    if (this.literalValue != null && b !== this.literalValue) {
+      throw new InvalidTypeError(this.name, this.literalValue.toString(), b);
+    }
+    return b as T;
+  }
 }
 
-export function extend<
-    B extends Type<any, Uint8Array>,
-    S extends Record<string, Type<any, any>>,
->(name: string, base: B, schema: S): Type<Reify<B> & Reify<S>, Uint8Array> {
-  return [
-    (t, parent) => {
-      const [baseSerializer] = base;
-      baseSerializer(t, name);
-      // Test all property constraints
-      for (const [_key, validator] of Object.entries(schema)) {
-        const key = _key as keyof Reify<S>;
-        const propValue = (t as any)[key];
-        (validator as Type<any, any>)[0](propValue, name);
-      }
-      if (parent != null) {
-        return t;
-      }
-      return msgpackr.pack(t);
-    },
-    (_o, parent) => {
-      let o: unknown;
-      if (parent == null) {
-        o = msgpackr.unpack(_o as Uint8Array);
-      } else if (typeof _o === 'object') {
-        o = _o;
-      } else {
-        throw new InvalidTypeError(name, 'object', o);
-      }
-      const [_, baseDeserializer] = base;
-      baseDeserializer(o, name);
-      // Test all property constraints
-      for (const [_key, validator] of Object.entries(schema)) {
-        const key = _key as keyof Reify<S>;
-        const propValue = (o as any)[key];
-        (validator as Type<any, any>)[1](propValue, name);
-      }
-      return o as Reify<B> & Reify<S>;
-    },
-  ] as const;
+export const str = (name: string): Type<string> => new StringType(name);
+class StringType extends TypeImpl<string> {
+  readonly validate = (s: unknown) => {
+    if (typeof s !== 'string') {
+      throw new InvalidTypeError(this.name, 'string', s);
+    }
+    return s;
+  }
 }
 
-export function union<
+export const num = (name: string): Type<number> => new NumberType(name);
+class NumberType extends TypeImpl<number> {
+  readonly validate = (n: unknown) => {
+    if (typeof n !== 'number') {
+      throw new InvalidTypeError(this.name, 'number', n);
+    }
+    return n;
+  }
+}
+
+export const u8array = (name: string): Type<Uint8Array> => new Uint8ArrayType(name);
+class Uint8ArrayType extends TypeImpl<Uint8Array> {
+  readonly validate = (u: unknown) => {
+    if (!(u instanceof Uint8Array)) {
+      throw new InvalidTypeError(this.name, 'u8array', u);
+    }
+    return u;
+  }
+}
+
+export const optional = <S extends Type<any>>(base: S): Type<Reify<S> | undefined> => new OptionalType<S>(base);
+class OptionalType<T extends Type<any>> extends TypeImpl<Reify<T> | undefined> {
+  constructor(private readonly base: T) {
+    // TODO: wire parent name down into optionals
+    super('');
+  }
+
+  readonly validate = (u: unknown): Reify<T> | undefined => {
+    if (u != null) {
+      return this.base.validate(u);
+    }
+    return undefined;
+  }
+}
+
+// Use a dummy `V` type parameter to avoid nested property types from collapsing to `any`
+export const rec = <V, S extends Record<string, Type<V>>>(name: string, schema: S): Type<Reify<S>> => new RecordType<V, S>(name, schema);
+class RecordType<V, S extends Record<string, Type<V>>> extends TypeImpl<Reify<S>> {
+  constructor(name: string, private readonly schema: S) {
+    super(name);
+  }
+
+  readonly validate = (u: unknown, ignoredKeys?: string[]): Reify<S> => {
+    if (typeof u !== 'object') {
+      throw new InvalidTypeError(this.name, 'object', u);
+    }
+    const ignoredKeySet = new Set(ignoredKeys);
+    let result: Partial<Reify<S>> = {};
+    // Test all property constraints
+    for (const [key, validator] of Object.entries(this.schema)) {
+      if (ignoredKeySet.has(key)) {
+        continue;
+      }
+      const propValue = (u as any)[key];
+      const validatedValue = validator.validate(propValue);
+      result[key as keyof Reify<S>] = validatedValue as any;
+    }
+    return result as Reify<S>;
+  }
+}
+
+export const extend = <
+  V, S extends Record<string, Type<V>>,
+  BV, BS extends Record<string, Type<BV>>, B extends Type<Reify<BS>>, BR extends RecordType<BV, BS>
+>(name: string, base: B, schema: S): Type<Omit<Reify<BS>, keyof Reify<S>> & Reify<S>> => new ExtendsType<V, S, BV, BS, BR>(name, base as unknown as BR, schema);
+class ExtendsType<
+  V, S extends Record<string, Type<V>>,
+  BV, BS extends Record<string, Type<BV>>, B extends RecordType<BV, BS>
+> extends TypeImpl<Omit<Reify<BS>, keyof Reify<S>> & Reify<S>> {
+  private subtype: RecordType<V, S>;
+
+  constructor(name: string, private readonly baseType: B, private readonly schema: S) {
+    super(name);
+    this.subtype = new RecordType(name, schema);
+  }
+
+  readonly validate = (u: unknown): Omit<Reify<BS>, keyof Reify<S>> & Reify<S> => {
+    const ignoredKeys = Object.keys(this.schema);
+    const baseResult = this.baseType.validate(u, ignoredKeys);
+    const schemaResult = this.subtype.validate(u);
+    return {
+      ...baseResult,
+      ...schemaResult,
+    };
+  }
+}
+
+
+export const union = <
     D extends string,
-    B extends Type<any, Uint8Array>,
+    B extends Type<any>,
     S extends B[],
->(name: string, discriminator: D, schemas: S): Type<Reify<S[0]>, Uint8Array> {
-  return [
-    (t, parent) => {
-      for (const schema of schemas) {
-        try {
-          const [serializer] = (schema as unknown as Type<any, any>);
-          serializer(t, name);
-          break;
-        } catch (e) {
-          continue;
-        }
+>(name: string, discriminator: D, schemas: S): Type<Reify<S[0]>> => new UnionRecordType(name, discriminator, schemas);
+class UnionRecordType<D extends string, B extends Type<object>, S extends B[]> extends TypeImpl<Reify<S[0]>> {
+  constructor(name: string, private readonly discriminator: D, private readonly schemas: S) {
+    super(name);
+  }
+
+  readonly validate = (u: unknown) => {
+    for (const schema of this.schemas) {
+      try {
+        const validated = schema.validate(u) as Reify<S[0]>;
+        return validated;
+      } catch (e) {
+        continue;
       }
-      if (parent != null) {
-        return t;
-      }
-      return msgpackr.pack(t);
-    },
-    (_o, parent) => {
-      let o: unknown;
-      if (parent == null) {
-        o = msgpackr.unpack(_o as Uint8Array);
-      } else if (typeof _o === 'object') {
-        o = _o;
-      } else {
-        throw new InvalidTypeError(name, 'union', o);
-      }
-      for (const schema of schemas) {
-        try {
-          const [_, deserializer] = (schema as unknown as Type<any, any>);
-          deserializer(o, name);
-          return o as Reify<S[0]>;
-        } catch (e) {
-          continue;
-        }
-      }
-      throw new InvalidTypeError(name, 'union', o);
-    },
-  ] as const;
+    }
+    throw new InvalidTypeError(this.name, 'union', u);
+  }
 }
 
-// TODO: support top level lists (i.e. add JSON.parse and JSON.serialize)
-export function list<S extends Type<any, any>>(
-    name: string,
-    itemSchema: S,
-): Type<Reify<S>[], any> {
-  return [
-    (t, parent) => {
-      if (parent != null) {
-        return t;
-      }
-      for (const i of t) {
-        itemSchema[0](i, name);
-      }
-      return msgpackr.pack(t);
-    },
-    (_a, parent) => {
-      let a;
-      if (parent == null) {
-        a = msgpackr.unpack(_a as Uint8Array);
-      } else if (Array.isArray(_a)) {
-        a = _a;
-      } else {
-        throw new InvalidTypeError(name, 'array', a);
-      }
-      for (const i of a) {
-        itemSchema[1](i, name);
-      }
-      return a as Reify<S>[];
-    },
-  ] as const;
+export const list = <S extends Type<any>>(name: string, itemSchema: S): Type<Reify<S>[]> => new ListType(name, itemSchema);
+class ListType<I extends Type<any>> extends TypeImpl<Reify<I>[]> {
+  constructor(name: string, private readonly itemSchema: I) {
+    super(name);
+  }
+
+  readonly validate = (u: unknown) => {
+    if (!Array.isArray(u)) {
+      throw new InvalidTypeError(this.name, 'array', u);
+    }
+    const result = [];
+    for (const i of u) {
+      result.push(this.itemSchema.validate(i));
+    }
+    return result;
+  }
 }

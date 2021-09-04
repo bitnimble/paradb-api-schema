@@ -8,20 +8,29 @@ const user = rec('user', {
   username: str('username'),
   email: str('email'),
 });
-export const [serializeUser, deserializeUser] = user;
+export const {
+  serialize: serializeUser,
+  deserialize: deserializeUser,
+} = user;
 
 export type GetUserResponse = Reify<typeof serializeGetUserResponse>;
 export const getUserSuccess = extend('getUserSuccess', apiSuccess, {
   user,
 });
-export const [serializeGetUserResponse, deserializeGetUserResponse] = union(
+export const {
+  serialize: serializeGetUserResponse,
+  deserialize: deserializeGetUserResponse,
+} = union(
     'getUserResponse',
     'success',
     [getUserSuccess, apiError],
 );
 
 export type UserSession = Reify<typeof serializeUserSession>;
-export const [serializeUserSession, deserializeUserSession] = rec('userSession', {
+export const {
+  serialize: serializeUserSession,
+  deserialize: deserializeUserSession,
+} = rec('userSession', {
   id: str('id'),
   username: str('username'),
   accountStatus: str('accountStatus'),
@@ -30,14 +39,20 @@ export const [serializeUserSession, deserializeUserSession] = rec('userSession',
 
 /* Login */
 export type LoginRequest = Reify<typeof serializeLoginRequest>;
-export const [serializeLoginRequest, deserializeLoginRequest] = rec('loginRequest', {
+export const {
+  serialize: serializeLoginRequest,
+  deserialize: deserializeLoginRequest,
+} = rec('loginRequest', {
   username: str('username'),
   password: str('password'),
 });
 export type LoginError = Reify<typeof loginError>;
 const loginError = extend('loginError', apiError, {});
 export type LoginResponse = Reify<typeof serializeLoginResponse>;
-export const [serializeLoginResponse, deserializeLoginResponse] = union(
+export const {
+  serialize: serializeLoginResponse,
+  deserialize: deserializeLoginResponse,
+} = union(
     'loginResponse',
     'success',
     [apiSuccess, loginError],
@@ -45,7 +60,10 @@ export const [serializeLoginResponse, deserializeLoginResponse] = union(
 
 /* Signup */
 export type SignupRequest = Reify<typeof serializeSignupRequest>;
-export const [serializeSignupRequest, deserializeSignupRequest] = rec('signupRequest', {
+export const {
+  serialize: serializeSignupRequest,
+  deserialize: deserializeSignupRequest,
+} = rec('signupRequest', {
   username: str('username'),
   email: str('email'),
   password: str('password'),
@@ -57,7 +75,10 @@ const signupError = extend('signupError', apiError, {
   password: optional(str('password')),
 });
 export type SignupResponse = Reify<typeof serializeSignupResponse>;
-export const [serializeSignupResponse, deserializeSignupResponse] = union(
+export const {
+  serialize: serializeSignupResponse,
+  deserialize: deserializeSignupResponse,
+} = union(
     'signupResponse',
     'success',
     [apiSuccess, signupError],

@@ -20,14 +20,20 @@ const pdMap = rec('map', {
   complexities: list('complexities', complexity),
   description: optional(str('description')),
 });
-export const [serializeMap, deserializeMap] = pdMap;
+export const {
+  serialize: serializeMap,
+  deserialize: deserializeMap,
+} = pdMap;
 
 /* GET getMap */
 export type GetMapResponse = Reify<typeof serializeGetMapResponse>;
 const getMapSuccess = extend('getMapSuccess', apiSuccess, {
   map: pdMap,
 });
-export const [serializeGetMapResponse, deserializeGetMapResponse] = union(
+export const {
+  serialize: serializeGetMapResponse,
+  deserialize: deserializeGetMapResponse,
+} = union(
     'getMapResponse',
     'success',
     [getMapSuccess, apiError],
@@ -36,7 +42,10 @@ export const [serializeGetMapResponse, deserializeGetMapResponse] = union(
 /* GET deleteMap */
 export type DeleteMapResponse = Reify<typeof serializeDeleteMapResponse>;
 const deleteMapSuccess = extend('deleteMapSuccess', apiSuccess, {});
-export const [serializeDeleteMapResponse, deserializeDeleteMapResponse] = union(
+export const {
+  serialize: serializeDeleteMapResponse,
+  deserialize: deserializeDeleteMapResponse,
+} = union(
     'deleteMapResponse',
     'success',
     [deleteMapSuccess, apiError],
@@ -47,7 +56,10 @@ export type FindMapsResponse = Reify<typeof serializeFindMapsResponse>;
 const findMapsSuccess = extend('findMapsSuccess', apiSuccess, {
   maps: list('maps', pdMap),
 });
-export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union(
+export const {
+  serialize: serializeFindMapsResponse,
+  deserialize: deserializeFindMapsResponse,
+} = union(
     'findMapsResponse',
     'success',
     [findMapsSuccess, apiError],
@@ -55,7 +67,10 @@ export const [serializeFindMapsResponse, deserializeFindMapsResponse] = union(
 
 /* POST submitMap */
 export type SubmitMapRequest = Reify<typeof serializeSubmitMapRequest>;
-export const [serializeSubmitMapRequest, deserializeSubmitMapRequest] = rec('submitMapRequest', {
+export const {
+  serialize: serializeSubmitMapRequest,
+  deserialize: deserializeSubmitMapRequest,
+} = rec('submitMapRequest', {
   mapData: u8array('mapData'),
 });
 
@@ -65,9 +80,15 @@ const submitMapSuccess = extend('submitMapSuccess', apiSuccess, {
 });
 
 const submitMapError = extend('submitMapError', apiError, {});
-export const [serializeSubmitMapError, deserializeSubmitMapError] = submitMapError;
+export const {
+  serialize: serializeSubmitMapError,
+  deserialize: deserializeSubmitMapError,
+} = submitMapError;
 export type SubmitMapResponse = Reify<typeof serializeSubmitMapResponse>;
-export const [serializeSubmitMapResponse, deserializeSubmitMapResponse] = union(
+export const {
+  serialize: serializeSubmitMapResponse,
+  deserialize: deserializeSubmitMapResponse,
+} = union(
     'submitMapResponse',
     'success',
     [submitMapSuccess, submitMapError],
