@@ -11,6 +11,7 @@ describe('serialization', () => {
       expect(rt(someBool, true)).toBe(true);
       expect(rt(someBool, false)).toBe(false);
     });
+
     it('fails to serialize a bool of the wrong literal type', () => {
       const literalTrue = bool('literalTrue', true);
       // @ts-expect-error
@@ -22,6 +23,14 @@ describe('serialization', () => {
     it('can round-trip a string', () => {
       const someStr = str('someStr');
       expect(rt(someStr, 'hello world')).toEqual('hello world');
+    });
+
+    it('fails to serialize a string of the wrong literal type', () => {
+      const literalHelloWorld = str('literalHelloWorld', 'hello', 'world');
+      expect(rt(literalHelloWorld, 'hello')).toEqual('hello');
+      expect(rt(literalHelloWorld, 'world')).toEqual('world');
+      // @ts-expect-error
+      expect(() => literalHelloWorld.serialize('invalid')).toThrow('Expected literalHelloWorld to be one of values ["hello", "world"] but found "invalid" instead');
     });
   });
 

@@ -59,13 +59,22 @@ class BoolType<T extends boolean> extends TypeImpl<T> {
   }
 }
 
-export const str = (name: string): Type<string> => new StringType(name);
-class StringType extends TypeImpl<string> {
+export const str = <T extends string>(name: string, ...literalValues: T[]): Type<T> => new StringType(name, literalValues);
+class StringType<T extends string> extends TypeImpl<T> {
+  constructor(name: string, private readonly literalValues: T[]) {
+    super(name);
+  }
+
   readonly validate = (s: unknown) => {
     if (typeof s !== 'string') {
       throw new InvalidTypeError(this.name, 'string', s);
     }
-    return s;
+    if (this.literalValues.length > 0) {
+      if (!this.literalValues.includes(s as any)) {
+        throw new Error(`Expected ${this.name} to be one of values [${this.literalValues.map(s => `"${s}"`).join(", ")}] but found "${s}" instead`);
+      }
+    }
+    return s as T;
   }
 }
 
