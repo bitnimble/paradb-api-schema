@@ -166,7 +166,7 @@ describe('serialization', () => {
         }),
         {
           prop3: str('prop3'),
-          prop4: optional(bool('prop4')),
+          prop4: optional(bool('prop4', true)),
         },
       );
       const val: Reify<typeof extended> = {

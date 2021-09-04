@@ -113,17 +113,18 @@ class OptionalType<T extends Type<any>> extends TypeImpl<Reify<T> | undefined> {
   };
 }
 
+// Helper type to encapsulate `record`, `extend` and `union`.
+type Recordish = _Recordish<Record<string, Type<unknown>>>;
 type _Recordish<S> = TypeImpl<S> & {
   schema: S,
   hasKey(key: string): boolean,
   validate(u: unknown, ignoredKeys?: string[]): Reify<S>,
   validateProperty(key: keyof S, value: S[keyof S]): S[keyof S],
 };
-type Recordish = _Recordish<Record<string, Type<any>>>;
+type RecordSchema = Record<string, Type<unknown>>;
 
-// Use a dummy `V` type parameter to avoid nested property types from collapsing to `any`
-export const rec = <V, S extends Record<string, Type<V>>>(name: string, schema: S): Type<Reify<S>> => new RecordType<V, S>(name, schema);
-class RecordType<V, S extends Record<string, Type<V>>> extends TypeImpl<Reify<S>> {
+export const rec = <S extends RecordSchema>(name: string, schema: S): Type<Reify<S>> => new RecordType<S>(name, schema);
+class RecordType<S extends RecordSchema> extends TypeImpl<Reify<S>> {
   constructor(name: string, readonly schema: S) {
     super(name);
   }
@@ -156,14 +157,12 @@ class RecordType<V, S extends Record<string, Type<V>>> extends TypeImpl<Reify<S>
 }
 
 export const extend = <
-  V, S extends Record<string, Type<V>>,
-  BV, BS extends Record<string, Type<BV>>, B extends Type<Reify<BS>>
->(name: string, base: B, schema: S): Type<Omit<Reify<B>, keyof Reify<S>> & Reify<S>> => new ExtendsType<V, S, BV, BS, B>(name, base as unknown as Recordish, schema);
+  S extends RecordSchema, B extends Type<Reify<RecordSchema>>
+>(name: string, base: B, schema: S): Type<Omit<Reify<B>, keyof Reify<S>> & Reify<S>> => new ExtendsType<S, B>(name, base as unknown as Recordish, schema);
 class ExtendsType<
-  V, S extends Record<string, Type<V>>,
-  BV, BS extends Record<string, Type<BV>>, B extends Type<Reify<BS>>
+  S extends RecordSchema, B extends Type<Reify<RecordSchema>>
 > extends TypeImpl<Omit<Reify<B>, keyof Reify<S>> & Reify<S>> {
-  private subtype: RecordType<V, S>;
+  private subtype: RecordType<S>;
 
   constructor(name: string, private readonly baseType: Recordish, readonly schema: S) {
     super(name);
@@ -241,8 +240,8 @@ class UnionRecordType<
   };
 }
 
-export const list = <S extends Type<any>>(name: string, itemSchema: S): Type<Reify<S>[]> => new ListType(name, itemSchema);
-class ListType<I extends Type<any>> extends TypeImpl<Reify<I>[]> {
+export const list = <S extends Type<unknown>>(name: string, itemSchema: S): Type<Reify<S>[]> => new ListType(name, itemSchema);
+class ListType<I extends Type<unknown>> extends TypeImpl<Reify<I>[]> {
   constructor(name: string, private readonly itemSchema: I) {
     super(name);
   }
@@ -251,9 +250,9 @@ class ListType<I extends Type<any>> extends TypeImpl<Reify<I>[]> {
     if (!Array.isArray(u)) {
       throw new InvalidTypeError(this.name, 'array', u);
     }
-    const result = [];
+    const result: Reify<I>[] = [];
     for (const i of u) {
-      result.push(this.itemSchema.validate(i));
+      result.push(this.itemSchema.validate(i) as Reify<I>);
     }
     return result;
   };
