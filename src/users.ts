@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from './api';
-import { extend, optional, rec, Reify, str, union } from './serialization';
+import { extend, optional, rec, Reify, str, union } from 'schema-bob';
 
 /* Structs */
 export type User = Reify<typeof serializeUser>;

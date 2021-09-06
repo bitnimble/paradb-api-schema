@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from './api';
-import { extend, list, num, optional, rec, Reify, str, u8array, union } from './serialization';
+import { extend, list, num, optional, rec, Reify, str, u8array, union } from 'schema-bob';
 
 /* Structs */
 export type Complexity = Reify<typeof complexity>;

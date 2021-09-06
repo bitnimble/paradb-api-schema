@@ -1,4 +1,4 @@
-import { bool, num, rec, Reify, str, union } from './serialization';
+import { bool, num, rec, Reify, str, union } from 'schema-bob';
 
 export type ApiSuccess = Reify<typeof apiSuccess>;
 export const apiSuccess = rec('apiSuccess', {
