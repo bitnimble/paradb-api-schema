@@ -83,3 +83,25 @@ export const {
     'success',
     [apiSuccess, signupError],
 );
+
+/** Update */
+export type ChangePasswordRequest = Reify<typeof serializeChangePasswordRequest>;
+export const {
+  serialize: serializeChangePasswordRequest,
+  deserialize: deserializeChangePasswordRequest,
+} = rec('changePasswordRequest', {
+  id: str('id'),
+  oldPassword: str('oldPassword'),
+  newPassword: str('newPassword'),
+});
+
+export type ChangePasswordError = Reify<typeof changePasswordError>;
+const changePasswordError = extend('changePasswordError', apiError, {
+  oldPassword: optional(str('oldPassword')),
+  newPassword: optional(str('newPassword')),
+});
+export type ChangePasswordResponse = Reify<typeof serializeChangePasswordResponse>;
+export const {
+  serialize: serializeChangePasswordResponse,
+  deserialize: deserializeChangePasswordResponse,
+} = union('changePasswordResponse', 'success', [apiSuccess, changePasswordError]);
