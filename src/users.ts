@@ -1,5 +1,5 @@
-import { apiError, apiSuccess } from './api';
 import { extend, optional, rec, Reify, str, union } from 'schema-bob';
+import { apiError, apiSuccess } from './api';
 
 /* Structs */
 export type User = Reify<typeof serializeUser>;
@@ -21,9 +21,9 @@ export const {
   serialize: serializeGetUserResponse,
   deserialize: deserializeGetUserResponse,
 } = union(
-    'getUserResponse',
-    'success',
-    [getUserSuccess, apiError],
+  'getUserResponse',
+  'success',
+  [getUserSuccess, apiError],
 );
 
 export type UserSession = Reify<typeof serializeUserSession>;
@@ -53,9 +53,9 @@ export const {
   serialize: serializeLoginResponse,
   deserialize: deserializeLoginResponse,
 } = union(
-    'loginResponse',
-    'success',
-    [apiSuccess, loginError],
+  'loginResponse',
+  'success',
+  [apiSuccess, loginError],
 );
 
 /* Signup */
@@ -79,9 +79,9 @@ export const {
   serialize: serializeSignupResponse,
   deserialize: deserializeSignupResponse,
 } = union(
-    'signupResponse',
-    'success',
-    [apiSuccess, signupError],
+  'signupResponse',
+  'success',
+  [apiSuccess, signupError],
 );
 
 /** Update */

@@ -1,5 +1,5 @@
-import { apiError, apiSuccess } from './api';
 import { extend, list, num, optional, rec, Reify, str, u8array, union } from 'schema-bob';
+import { apiError, apiSuccess } from './api';
 
 /* Structs */
 export type Complexity = Reify<typeof complexity>;
@@ -34,9 +34,9 @@ export const {
   serialize: serializeGetMapResponse,
   deserialize: deserializeGetMapResponse,
 } = union(
-    'getMapResponse',
-    'success',
-    [getMapSuccess, apiError],
+  'getMapResponse',
+  'success',
+  [getMapSuccess, apiError],
 );
 
 /* GET deleteMap */
@@ -46,9 +46,9 @@ export const {
   serialize: serializeDeleteMapResponse,
   deserialize: deserializeDeleteMapResponse,
 } = union(
-    'deleteMapResponse',
-    'success',
-    [deleteMapSuccess, apiError],
+  'deleteMapResponse',
+  'success',
+  [deleteMapSuccess, apiError],
 );
 
 /* GET findMaps */
@@ -60,9 +60,9 @@ export const {
   serialize: serializeFindMapsResponse,
   deserialize: deserializeFindMapsResponse,
 } = union(
-    'findMapsResponse',
-    'success',
-    [findMapsSuccess, apiError],
+  'findMapsResponse',
+  'success',
+  [findMapsSuccess, apiError],
 );
 
 /* POST submitMap */
@@ -89,7 +89,7 @@ export const {
   serialize: serializeSubmitMapResponse,
   deserialize: deserializeSubmitMapResponse,
 } = union(
-    'submitMapResponse',
-    'success',
-    [submitMapSuccess, submitMapError],
+  'submitMapResponse',
+  'success',
+  [submitMapSuccess, submitMapError],
 );

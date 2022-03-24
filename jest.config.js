@@ -4,5 +4,5 @@ module.exports = {
     '^msgpackr$': 'msgpackr/dist',
   },
   modulePaths: ['<rootDir>/src'],
-  reporters: ['jest-standard-reporter']
+  reporters: ['jest-standard-reporter'],
 };
