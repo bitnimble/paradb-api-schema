@@ -2,10 +2,11 @@ import { extend, list, num, optional, rec, Reify, str, u8array, union } from 'sc
 import { apiError, apiSuccess } from './api';
 
 /* Structs */
-export type Complexity = Reify<typeof complexity>;
-const complexity = rec('complexity', {
-  complexity: num('complexity'),
-  complexityName: optional(str('complexityName')),
+export type Difficulty = Reify<typeof difficulty>;
+const difficulty = rec('difficulty', {
+  difficulty: optional(num('difficulty')),
+  // Difficulty name is temporarily `optional` while we perform the migration and rescan all rlrr's.
+  difficultyName: optional(str('difficultyName')),
 });
 
 export type PDMap = Reify<typeof serializeMap>;
@@ -17,7 +18,9 @@ const pdMap = rec('map', {
   author: optional(str('author')),
   uploader: str('uploader'),
   albumArt: optional(str('albumArt')),
-  complexities: list('complexities', complexity),
+  // complexity is temporarily `optional` while we perform the migration and rescan all rlrr's.
+  complexity: optional(num('complexity')),
+  difficulties: list('difficulties', difficulty),
   description: optional(str('description')),
 });
 export const {
