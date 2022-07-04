@@ -10,9 +10,10 @@ describe('maps', () => {
       author: 'Alice',
       uploader: 'Alice',
       albumArt: undefined,
-      complexities: [
-        { complexity: 1, complexityName: 'Easy' },
-        { complexity: 5, complexityName: 'Hard' },
+      complexity: 2,
+      difficulties: [
+        { difficulty: undefined, difficultyName: 'Easy' },
+        { difficulty: undefined, difficultyName: 'Hard' },
       ],
       description: 'Best song ever',
     };
