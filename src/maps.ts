@@ -10,7 +10,7 @@ const difficulty = rec('difficulty', {
 });
 
 export type PDMap = Reify<typeof serializeMap>;
-const pdMap = rec('map', {
+export const pdMap = rec('map', {
   id: str('id'),
   submissionDate: str('submissionDate'),
   title: str('title'),
@@ -22,6 +22,7 @@ const pdMap = rec('map', {
   complexity: optional(num('complexity')),
   difficulties: list('difficulties', difficulty),
   description: optional(str('description')),
+  favorites: num('favorites'),
 });
 export const {
   serialize: serializeMap,
