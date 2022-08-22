@@ -1,4 +1,4 @@
-import { extend, list, optional, rec, Reify, str, union } from 'schema-bob';
+import { bool, extend, list, optional, rec, Reify, str, union } from 'schema-bob';
 import { apiError, apiSuccess } from './api';
 import { pdMap } from './maps';
 
@@ -117,3 +117,12 @@ export const {
   serialize: serializeGetFavoriteMapsResponse,
   deserialize: deserializeGetFavoriteMapsResponse,
 } = union('getFavoriteMapsResponse', 'success', [getFavoriteMapsSuccess, apiError]);
+
+export type SetFavoriteMapsRequest = Reify<typeof serializeSetFavoriteMapsRequest>;
+export const {
+  serialize: serializeSetFavoriteMapsRequest,
+  deserialize: deserializeSetFavoriteMapsRequest,
+} = rec('setFavoriteMapsRequest', {
+  mapIds: list('mapIds', str('mapId')),
+  isFavorite: bool('isFavorite'),
+});
