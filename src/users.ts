@@ -1,5 +1,6 @@
-import { extend, optional, rec, Reify, str, union } from 'schema-bob';
+import { bool, extend, list, optional, rec, Reify, str, union } from 'schema-bob';
 import { apiError, apiSuccess } from './api';
+import { pdMap } from './maps';
 
 /* Structs */
 export type User = Reify<typeof serializeUser>;
@@ -105,3 +106,23 @@ export const {
   serialize: serializeChangePasswordResponse,
   deserialize: deserializeChangePasswordResponse,
 } = union('changePasswordResponse', 'success', [apiSuccess, changePasswordError]);
+
+/** User-specific map data. User ID is implicit and pulled from the session cookie for all of these requests. */
+export type GetFavoriteMapsSuccess = Reify<typeof getFavoriteMapsSuccess>;
+export const getFavoriteMapsSuccess = extend('getFavoriteMapsSuccess', apiSuccess, {
+  maps: list('maps', pdMap),
+});
+export type GetFavoriteMapsResponse = Reify<typeof serializeGetFavoriteMapsResponse>;
+export const {
+  serialize: serializeGetFavoriteMapsResponse,
+  deserialize: deserializeGetFavoriteMapsResponse,
+} = union('getFavoriteMapsResponse', 'success', [getFavoriteMapsSuccess, apiError]);
+
+export type SetFavoriteMapsRequest = Reify<typeof serializeSetFavoriteMapsRequest>;
+export const {
+  serialize: serializeSetFavoriteMapsRequest,
+  deserialize: deserializeSetFavoriteMapsRequest,
+} = rec('setFavoriteMapsRequest', {
+  mapIds: list('mapIds', str('mapId')),
+  isFavorite: bool('isFavorite'),
+});

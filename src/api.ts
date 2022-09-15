@@ -20,4 +20,5 @@ export const {
   deserialize: deserializeApiError,
 } = apiError;
 
+export type ApiResponse = Reify<typeof apiResponse>;
 export const apiResponse = union('apiResponse', 'success', [apiSuccess, apiError]);
