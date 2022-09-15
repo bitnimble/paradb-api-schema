@@ -1,4 +1,4 @@
-import { extend, list, num, optional, rec, Reify, str, u8array, union } from 'schema-bob';
+import { bool, extend, list, num, optional, rec, Reify, str, u8array, union } from 'schema-bob';
 import { apiError, apiSuccess } from './api';
 
 /* Structs */
@@ -8,6 +8,15 @@ const difficulty = rec('difficulty', {
   // Difficulty name is temporarily `optional` while we perform the migration and rescan all rlrr's.
   difficultyName: optional(str('difficultyName')),
 });
+
+export type MapUserProjection = Reify<typeof serializeMapUserProjection>;
+const mapUserProjection = rec('mapUserProjection', {
+  isFavorited: bool('isFavorited'),
+});
+export const {
+  serialize: serializeMapUserProjection,
+  deserialize: deserializeMapUserProjection,
+} = mapUserProjection;
 
 export type PDMap = Reify<typeof serializeMap>;
 export const pdMap = rec('map', {
@@ -23,6 +32,7 @@ export const pdMap = rec('map', {
   difficulties: list('difficulties', difficulty),
   description: optional(str('description')),
   favorites: num('favorites'),
+  userProjection: optional(mapUserProjection),
 });
 export const {
   serialize: serializeMap,

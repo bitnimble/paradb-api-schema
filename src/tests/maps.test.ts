@@ -17,6 +17,7 @@ describe('maps', () => {
       ],
       description: 'Best song ever',
       favorites: 5,
+      userProjection: undefined,
     };
     const serialized = serializeMap(map);
     const deserialized = deserializeMap(serialized);
