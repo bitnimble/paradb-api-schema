@@ -79,6 +79,23 @@ export const {
   [findMapsSuccess, apiError],
 );
 
+/** No serialize/deserialize is provided, as SearchMapsRequest is only intended be used as a GET request via query parameters.  */
+export const mapSortableAttributes = [
+  'title',
+  'artist',
+  'author',
+  'favorites',
+  'submissionDate',
+] as const;
+export type MapSortableAttributes = typeof mapSortableAttributes[number];
+export type SearchMapsRequest = {
+  query: string,
+  offset: number,
+  limit: number,
+  sort?: MapSortableAttributes,
+  sortDirection?: 'asc' | 'desc',
+};
+
 /* POST submitMap */
 export type SubmitMapRequest = Reify<typeof serializeSubmitMapRequest>;
 export const {
