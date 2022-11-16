@@ -102,6 +102,7 @@ export const {
   serialize: serializeSubmitMapRequest,
   deserialize: deserializeSubmitMapRequest,
 } = rec('submitMapRequest', {
+  id: optional(str('id')),
   mapData: u8array('mapData'),
 });
 
