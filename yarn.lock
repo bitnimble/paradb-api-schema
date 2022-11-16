@@ -2323,7 +2323,7 @@ saxes@^5.0.1:
 
 "schema-bob@https://github.com/bitnimble/schema-bob":
   version "1.0.0"
-  resolved "https://github.com/bitnimble/schema-bob#991c4b1c446950f2eb44a7bcc17ee0d5c8af1dff"
+  resolved "https://github.com/bitnimble/schema-bob#0f5d6ad6eb5d648767f2375e45d1743de01734d1"
 
 semver@7.x, semver@^7.3.2:
   version "7.3.5"
