@@ -601,11 +601,6 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-15.12.4.tgz#e1cf817d70a1e118e81922c4ff6683ce9d422e26"
   integrity sha512-zrNj1+yqYF4WskCMOHwN+w9iuD12+dGm0rQ35HLl9/Ouuq52cEtd0CH9qMgrdNmi5ejC1/V7vKEXYubB+65DkA==
 
-"@types/node@^16.6.2":
-  version "16.7.10"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-16.7.10.tgz#7aa732cc47341c12a16b7d562f519c2383b6d4fc"
-  integrity sha512-S63Dlv4zIPb8x6MMTgDq5WWRJQe56iBEY0O3SOFA9JrRienkOVDXSXBjjJw6HTNQYSE2JI6GMCR6LVbIMHJVvA==
-
 "@types/prettier@^2.1.5":
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/@types/prettier/-/prettier-2.3.0.tgz#2e8332cc7363f887d32ec5496b207d26ba8052bb"
@@ -2326,11 +2321,9 @@ saxes@^5.0.1:
   dependencies:
     xmlchars "^2.2.0"
 
-"schema-bob@https://github.com/anonymousthing/schema-bob":
+"schema-bob@https://github.com/bitnimble/schema-bob":
   version "1.0.0"
-  resolved "https://github.com/anonymousthing/schema-bob#fa932d612611171a638fad95eab454ebff1571d2"
-  dependencies:
-    "@types/node" "^16.6.2"
+  resolved "https://github.com/bitnimble/schema-bob#991c4b1c446950f2eb44a7bcc17ee0d5c8af1dff"
 
 semver@7.x, semver@^7.3.2:
   version "7.3.5"

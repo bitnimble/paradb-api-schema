@@ -6,7 +6,7 @@
   "files": [
     "dist"
   ],
-  "repository": "git@github.com:anonymousthing/paradb-api-schema.git",
+  "repository": "git@github.com:bitnimble/paradb-api-schema.git",
   "author": "D <me@kumo.dev>",
   "license": "MIT",
   "scripts": {
@@ -22,6 +22,6 @@
     "typescript": "^4.3.4"
   },
   "dependencies": {
-    "schema-bob": "https://github.com/anonymousthing/schema-bob"
+    "schema-bob": "https://github.com/bitnimble/schema-bob"
   }
 }
