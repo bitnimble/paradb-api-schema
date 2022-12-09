@@ -26,6 +26,7 @@ export const pdMap = rec('map', {
   artist: str('artist'),
   author: optional(str('author')),
   uploader: str('uploader'),
+  downloadCount: num('downloadCount'),
   albumArt: optional(str('albumArt')),
   // complexity is temporarily `optional` while we perform the migration and rescan all rlrr's.
   complexity: optional(num('complexity')),
@@ -86,6 +87,7 @@ export const mapSortableAttributes = [
   'author',
   'favorites',
   'submissionDate',
+  'downloadCount',
 ] as const;
 export type MapSortableAttributes = typeof mapSortableAttributes[number];
 export type SearchMapsRequest = {

@@ -9,6 +9,7 @@ describe('maps', () => {
       artist: 'Smash Mouth',
       author: 'Alice',
       uploader: 'Alice',
+      downloadCount: 3,
       albumArt: undefined,
       complexity: 2,
       difficulties: [
